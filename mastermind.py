@@ -1,8 +1,28 @@
 #!/usr/bin/python
-
 import argparse
 import random
 import sys
+
+"""A simple python program for solving Mastermind
+(probably a registered trademark of someone or other, used without permission,
+no endorsement expressed or implied).
+
+The game involves one player secretly choosing 4 pegs from 6 colors, and the other player
+iteratively attempting to guess the secret pattern. For each guess, the guess gets
+feedback in the form of zero or more red pegs (saying that the guess has the right color
+in the right location) and zero or more white pegs (saying that the right color is
+present, but in the wrong location).
+
+While playing, the question arose whether you could always win with less than 8 moves by
+the simple and naive strategy of only playing moves that are consistent with the responses
+thus far. I wrote this script to check that question.
+
+In actuality, the most naive strategy (picking the lexicographically first answer that is
+consistent with responses thus far) sometimes takes 9 guesses to arrive at the solution,
+but a random guesser generally does much better, and the "best" guesser (trying to pick a
+possibly-correct guess that will maximize information from the response) never needs more
+than 6 guesses.
+""" 
 
 COLORS = 6
 PINS = 4
@@ -54,7 +74,7 @@ def chooseFirst(answers):
 
 def chooseBest(answers):
   """Pick the best guess: the one that is likely to give the most information in its response
-     (measured by it having the smallest peak in response concentration)""""
+     (measured by it having the smallest peak in response concentration)"""
   allAnswers = list(answers)
   bestGuess = None
   bestScore = Math.pow(COLORS, PINS)
@@ -70,6 +90,24 @@ def chooseBest(answers):
       bestScore = score
       bestResults = results
   return (bestGuess, lambda: len(allAnswers))
+
+def chooseWorst(answers):
+  """Pick the worst guess"""
+  allAnswers = list(answers)
+  worstGuess = None
+  worstScore = 0
+  worstResults = {}
+  for guess in allAnswers:
+    results = {}
+    for possibleAnswer in allAnswers:
+      possibleResult = check(possibleAnswer, guess)
+      results[possibleResult] = 1 + results.get(possibleResult, 0)
+    score = max(results.values())
+    if score > worstScore:
+      worstGuess = guess
+      worstScore = score
+      worstResults = results
+  return (worstGuess, lambda: len(allAnswers))
 
 def chooseRandom(answers):
   """Pick a possibly correct answer at random"""
@@ -94,14 +132,18 @@ def play(answer, chooser, onRound = None):
   return rounds
 
 def printRound(rounds, answerCount):
+  """Output info about this guess & result"""
   guess, (red, white) = rounds[-1]
-  print "Round %d: %5d possible, guessed [%s], got %d red, %d white" % (len(rounds), answerCount, " ".join([str(v) for v in guess]), red, white)
+  print "Round %d: %5d possible, guessed [%s], got %d red, %d white" % (len(rounds), answerCount, " ".join(map(str,guess)), red, white)
 
 def playOnce(chooser):
+  """Play a single game with a random answer with a provided choosing strategy"""
   answer = randomPattern()
   play(answer, chooser, onRound = printRound)
 
 def playAll(chooser):
+  """Play a game for every possible answer with a provided choosing strategy, accumulating
+  and printing a summary of the outcomes"""
   results = {}
   for answer in allPatterns():
     rounds = play(answer, chooser)
@@ -111,14 +153,17 @@ def playAll(chooser):
   for r in sorted(results.keys()):
     print "%-6d: %d" % (r, results[r])
 
+# Choosing strategies
 CHOICES = {
   'first': chooseFirst,
   'best': chooseBest,
+  'worst': chooseWorst,
   'random': chooseRandom
 }
-CHOICES_HELP = ", ".join(CHOICES.keys())
+CHOICES_HELP = ", ".join(sorted(CHOICES.keys()))
 
 def choiceType(arg):
+  """Validate --choose arguments"""
   if arg in CHOICES:
     return CHOICES[arg]
   raise argparse.ArgumentTypeError("%s is unknown: valid choosers are [%s]" % 
@@ -143,6 +188,7 @@ def main(argv = None):
   PINS = args.pins
   
   args.action(chooser = args.choose)
+  return 0
 
 if __name__ == "__main__":
   sys.exit(main())
