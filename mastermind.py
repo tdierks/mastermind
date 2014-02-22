@@ -72,6 +72,23 @@ def chooseFirst(answers):
   answersCount = lambda: len(list(answers)) + 1
   return (guess, answersCount)
 
+def choosePolychrome(answers):
+  """Prefer answers which use a lot of colors as a simple improvement over monochrome guesses"""
+  allAnswers = list(answers)
+  bestGuess = None
+  bestColorCount = 0
+  for guess in allAnswers:
+    colorsUsed = [False] * COLORS
+    for pinColor in guess:
+      colorsUsed[pinColor] = True
+    colorCount = sum(colorsUsed)
+    if colorCount > bestColorCount:
+      bestGuess = guess
+      bestColorCount = colorCount
+    if bestColorCount == PINS:
+      break # shortcut
+  return (bestGuess, lambda: len(allAnswers))
+
 def chooseBest(answers):
   """Pick the best guess: the one that is likely to give the most information in its response
      (measured by it having the smallest peak in response concentration)"""
@@ -158,7 +175,8 @@ CHOICES = {
   'first': chooseFirst,
   'best': chooseBest,
   'worst': chooseWorst,
-  'random': chooseRandom
+  'random': chooseRandom,
+  'polychrome': choosePolychrome
 }
 CHOICES_HELP = ", ".join(sorted(CHOICES.keys()))
 
